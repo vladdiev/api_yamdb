@@ -1,7 +1,9 @@
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
+from rest_framework import filters
 from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -9,14 +11,17 @@ from reviews.models import User
 from .permissions import IsAdminOrStaffPermission, IsUserForSelfPermission
 from .serializers import (UserSerializer, AuthTokenSerializer,
                           AuthSignUpSerializer)
+from .utils import send_confirmation_code_to_email
 
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = (IsAdminOrStaffPermission,)
+    filter_backends = (filters.SearchFilter,)
     search_fields = ('=username',)
     lookup_field = 'username'
+    pagination_class = PageNumberPagination
 
     @action(
         detail=False,
@@ -42,7 +47,7 @@ def signup_new_user(request):
         serializer.is_valid(raise_exception=True)
         if serializer.validated_data['username'] != 'me':
             serializer.save()
-            # send_confirmation_code_to_email(username)
+            send_confirmation_code_to_email(username)
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(
             'Username указан неверно!', status=status.HTTP_400_BAD_REQUEST
@@ -54,7 +59,7 @@ def signup_new_user(request):
     serializer.is_valid(raise_exception=True)
     if serializer.validated_data['email'] == user.email:
         serializer.save()
-        # send_confirmation_code_to_email(username)
+        send_confirmation_code_to_email(username)
         return Response(serializer.data, status=status.HTTP_200_OK)
     return Response(
         'Почта указана неверно!', status=status.HTTP_400_BAD_REQUEST
