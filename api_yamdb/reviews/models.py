@@ -11,10 +11,15 @@ from .validators import validator_pub_year
 class User(AbstractUser):
     """User augmented fields."""
 
-    class RoleUser(models.TextChoices):
-        USER = 'user', 'User'
-        MODERATOR = 'moderator', 'Moderator'
-        ADMIN = 'admin', 'Administrator'
+    USER_ROLE_USER = 'user'
+    USER_ROLE_MODERATOR = 'moderator'
+    USER_ROLE_ADMIN = 'admin'
+
+    USER_ROLE_CHOICES = (
+        (USER_ROLE_USER, 'User'),
+        (USER_ROLE_MODERATOR, 'Moderator'),
+        (USER_ROLE_ADMIN, 'Administrator'),
+    )
 
     email = models.EmailField(
         verbose_name='E-mail',
@@ -25,8 +30,8 @@ class User(AbstractUser):
         verbose_name='Role',
         max_length=50,
         blank=True,
-        choices=RoleUser.choices,
-        default=RoleUser.USER
+        choices=USER_ROLE_CHOICES,
+        default=USER_ROLE_USER,
     )
 
     bio = models.TextField(
@@ -54,15 +59,15 @@ class User(AbstractUser):
 
     @property
     def is_user(self):
-        return self.role == 'user'
+        return self.role == self.USER_ROLE_USER
 
     @property
     def is_admin(self):
-        return self.is_staff or self.role == 'admin'
+        return self.is_staff or self.role == self.USER_ROLE_ADMIN
 
     @property
     def is_moderator(self):
-        return self.role == 'moderator'
+        return self.role == self.USER_ROLE_MODERATOR
 
 
 class Category(models.Model):
