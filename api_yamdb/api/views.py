@@ -1,5 +1,6 @@
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
+from django.db.models import Avg
 from rest_framework import filters
 from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view
@@ -8,8 +9,10 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from reviews.models import User
-from .permissions import IsAdminOrStaffPermission, IsUserForSelfPermission
-from .serializers import (UserSerializer, AuthTokenSerializer,
+from .mixins import CreateListDestroyViewSet
+from .permissions import IsAdminOrStaffPermission, IsUserForSelfPermission, AdminOrReadOnly
+from .serializers import (UserSerializer, AuthTokenSerializer, CategorySerializer, GenreSerializer,
+                          TitleSerializer, TitleViewSerializer,
                           AuthSignUpSerializer)
 from .utils import send_confirmation_code_to_email
 
@@ -85,3 +88,27 @@ def get_token(request):
     return Response(
         'Код подтверждения неверный', status=status.HTTP_400_BAD_REQUEST
     )
+    
+class GenreViewSet(CreateListDestroyViewSet):
+    queryset = Genre.objects.all()
+    serializer_class = GenreSerializer
+
+
+class CategoryViewSet(CreateListDestroyViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+
+
+class TitleViewSet(viewsets.ModelViewSet):
+    queryset = Title.objects.annotate(rating=Avg('reviews__score'))
+    permission_classes = AdminOrReadOnly
+    serializer_class = TitleViewSerialize
+    pagination_class = PageNumberPagination
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
+    filterset_class = TitleFilter
+    ordering_fields = ('name',)
+
+    def get_serializer_class(self):
+        if self.action in ['list', 'retrieve']:
+            return TitleSerializer
+        return TitleViewSerializer
