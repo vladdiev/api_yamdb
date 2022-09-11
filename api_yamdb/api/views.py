@@ -1,19 +1,22 @@
 from django.core.exceptions import ObjectDoesNotExist
-from django.shortcuts import get_object_or_404
 from django.db.models import Avg
-from rest_framework import filters
-from rest_framework import viewsets, status
+from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action, api_view
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from reviews.models import User
+
+from reviews.models import Category, Genre, Title, User
+from .filters import TitleFilter
 from .mixins import CreateListDestroyViewSet
-from .permissions import IsAdminOrStaffPermission, IsUserForSelfPermission, AdminOrReadOnly
-from .serializers import (UserSerializer, AuthTokenSerializer, CategorySerializer, GenreSerializer,
-                          TitleSerializer, TitleViewSerializer,
-                          AuthSignUpSerializer)
+from .permissions import (AdminOrReadOnly, IsAdminOrStaffPermission,
+                          IsUserForSelfPermission)
+from .serializers import (AuthSignUpSerializer, AuthTokenSerializer,
+                          CategorySerializer, GenreSerializer,
+                          ReadTitleSerializer, TitleSerializer, UserSerializer)
 from .utils import send_confirmation_code_to_email
 
 
@@ -88,27 +91,34 @@ def get_token(request):
     return Response(
         'Код подтверждения неверный', status=status.HTTP_400_BAD_REQUEST
     )
-    
-class GenreViewSet(CreateListDestroyViewSet):
-    queryset = Genre.objects.all()
-    serializer_class = GenreSerializer
 
 
 class CategoryViewSet(CreateListDestroyViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('name',)
+    lookup_field = 'slug'
+    permission_classes = (AdminOrReadOnly,)
+
+
+class GenreViewSet(CreateListDestroyViewSet):
+    queryset = Genre.objects.all()
+    serializer_class = GenreSerializer
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('name',)
+    lookup_field = 'slug'
+    permission_classes = (AdminOrReadOnly,)
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.annotate(rating=Avg('reviews__score'))
-    permission_classes = AdminOrReadOnly
-    serializer_class = TitleViewSerialize
-    pagination_class = PageNumberPagination
-    filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
+    queryset = Title.objects.annotate(rating=Avg('reviews__score')).all()
+    serializer_class = TitleSerializer
+    filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
-    ordering_fields = ('name',)
+    permission_classes = (AdminOrReadOnly,)
 
     def get_serializer_class(self):
-        if self.action in ['list', 'retrieve']:
+        if self.action in ['create', 'update', 'partial_update']:
             return TitleSerializer
-        return TitleViewSerializer
+        return ReadTitleSerializer
