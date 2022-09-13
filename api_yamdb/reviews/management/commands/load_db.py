@@ -11,6 +11,22 @@ class Command(BaseCommand):
 
         print("Loading data")
 
+        for row in DictReader(open('static/data/genre.csv')):
+            genre = Genre(
+                id=row['id'],
+                name=row['name'],
+                slug=row['slug']
+            )
+            genre.save()
+
+        for row in DictReader(open('static/data/genre_title.csv')):
+            title = Title(id=row['id'], pk=row['title_id'])
+            title.save()
+
+            genre = Genre.objects.filter(id=row['genre_id'])
+            for g in genre:
+                title.genre.add(g)
+
         for row in DictReader(open('static/data/category.csv')):
             category = Category(
                 id=row['id'],
@@ -47,18 +63,3 @@ class Command(BaseCommand):
             )
             comment.save()
 
-        for row in DictReader(open('static/data/genre.csv')):
-            genre = Genre(
-                id=row['id'],
-                name=row['name'],
-                slug=row['slug']
-            )
-            genre.save()
-
-        for row in DictReader(open('static/data/genre_title.csv')):
-            title = Title(id=row['title_id'])
-            title.save()
-
-            genre = Genre.objects.filter(id=row['genre_id'])
-            for g in genre:
-                title.genre.add(g)

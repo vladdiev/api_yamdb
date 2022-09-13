@@ -1,6 +1,7 @@
 from rest_framework import serializers
+from rest_framework.validators import UniqueTogetherValidator
 
-from reviews.models import Category, Genre, Title, User
+from reviews.models import Category, Genre, Title, User, Review, Comment
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -65,3 +66,40 @@ class AuthSignUpSerializer(serializers.ModelSerializer):
 class AuthTokenSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150)
     confirmation_code = serializers.CharField(max_length=50)
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    author = serializers.SlugRelatedField(
+        queryset=User.objects.all(), slug_field='username',
+        default=serializers.CurrentUserDefault()
+    )
+
+    class Meta:
+        model = Review
+        fields = ('id', 'text', 'author', 'score', 'pub_date')
+
+        extra_kwargs = {'score': {'required': True}}
+
+        validators = (
+            UniqueTogetherValidator(
+                queryset=Review.objects.all(),
+                fields=('author', 'text')
+            ),
+        )
+
+    def validate_score(self, value):
+        if not (1 <= value <= 10):
+            raise serializers.ValidationError(
+                'Score should be between 1 and 10')
+        return value
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    author = serializers.SlugRelatedField(
+        queryset=User.objects.all(), slug_field='username',
+        default=serializers.CurrentUserDefault()
+    )
+
+    class Meta:
+        model = Comment
+        exclude = ('review',)
