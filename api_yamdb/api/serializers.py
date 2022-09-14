@@ -1,8 +1,9 @@
-from django.shortcuts import get_object_or_404
-
 from rest_framework import serializers
+from rest_framework.validators import UniqueTogetherValidator
 
-from reviews.models import Category, Genre, Title, User, Review, Comment
+
+from reviews.models import Category, Comment, Genre, Review, Title, User
+from .utils import CurrentTitleDefault
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -71,47 +72,35 @@ class AuthTokenSerializer(serializers.Serializer):
 
 class ReviewSerializer(serializers.ModelSerializer):
     author = serializers.SlugRelatedField(
-        queryset=User.objects.all(), slug_field='username',
-        default=serializers.CurrentUserDefault()
+        default=serializers.CurrentUserDefault(),
+        read_only=True,
+        slug_field='username'
     )
+    title = serializers.HiddenField(
+        default=CurrentTitleDefault())
 
     class Meta:
+        fields = ('id', 'text', 'author', 'score', 'pub_date', 'title')
         model = Review
-        fields = ('id', 'text', 'author', 'score', 'pub_date')
-
-        extra_kwargs = {'score': {'required': True}}
-
-        # validators = (
-        #     UniqueTogetherValidator(
-        #         queryset=Review.objects.all(),
-        #         fields=('author', 'text')
-        #     ),
-        # )
-
-    def validate_score(self, value):
-        if not (1 <= value <= 10):
-            raise serializers.ValidationError(
-                'Score should be between 1 and 10')
-        return value
+        validators = [
+            UniqueTogetherValidator(
+                queryset=Review.objects.all(),
+                fields=('author', 'title')
+            )
+        ]
 
     def validate(self, data):
-        if self.context['request'].method == 'POST':
-            title_id = self.context['title_id']
-            title = get_object_or_404(
-                Title.objects.select_related(), id=title_id)
-            if Review.objects.filter(author=self.context['request'].user,
-                                     title=title).exists():
-                raise serializers.ValidationError(
-                    'You can leave only one review to each title')
+        if not 1 <= data['score'] <= 10:
+            raise serializers.ValidationError(
+                'Score should be between 1 and 10')
         return data
 
 
 class CommentSerializer(serializers.ModelSerializer):
     author = serializers.SlugRelatedField(
-        queryset=User.objects.all(), slug_field='username',
-        default=serializers.CurrentUserDefault()
+        read_only=True, slug_field='username'
     )
 
     class Meta:
+        fields = ('id', 'text', 'author', 'pub_date',)
         model = Comment
-        exclude = ('review',)

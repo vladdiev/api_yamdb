@@ -39,10 +39,11 @@ class IsAdminOrStaffPermission(BasePermission):
 class IsAuthorOrModerPermission(BasePermission):
 
     def has_object_permission(self, request, view, obj):
-        if request.method == 'DELETE' or request.method == 'PATCH':
-            return ((request.user.is_authenticated
-                    and request.user == obj.author)
-                    or (request.user.is_authenticated
-                    and request.user.is_moderator)
-                    or (request.user.is_authenticated
-                    and request.user.is_admin))
+        return (
+                request.method in SAFE_METHODS
+                or obj.author == request.user
+                or (request.user.is_authenticated
+                    and (request.user.is_admin
+                         or request.user.is_moderator)
+                    )
+        )

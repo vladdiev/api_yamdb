@@ -1,7 +1,8 @@
 from csv import DictReader
+
 from django.core.management import BaseCommand
 
-from reviews.models import Review, User, Title, Category, Comment, Genre
+from reviews.models import Category, Comment, Genre, Review, Title, User
 
 
 class Command(BaseCommand):
@@ -62,4 +63,3 @@ class Command(BaseCommand):
                 pub_date=row['pub_date']
             )
             comment.save()
-
