@@ -1,5 +1,6 @@
+from django.shortcuts import get_object_or_404
+
 from rest_framework import serializers
-from rest_framework.validators import UniqueTogetherValidator
 
 from reviews.models import Category, Genre, Title, User, Review, Comment
 
@@ -80,18 +81,29 @@ class ReviewSerializer(serializers.ModelSerializer):
 
         extra_kwargs = {'score': {'required': True}}
 
-        validators = (
-            UniqueTogetherValidator(
-                queryset=Review.objects.all(),
-                fields=('author', 'text')
-            ),
-        )
+        # validators = (
+        #     UniqueTogetherValidator(
+        #         queryset=Review.objects.all(),
+        #         fields=('author', 'text')
+        #     ),
+        # )
 
     def validate_score(self, value):
         if not (1 <= value <= 10):
             raise serializers.ValidationError(
                 'Score should be between 1 and 10')
         return value
+
+    def validate(self, data):
+        if self.context['request'].method == 'POST':
+            title_id = self.context['title_id']
+            title = get_object_or_404(
+                Title.objects.select_related(), id=title_id)
+            if Review.objects.filter(author=self.context['request'].user,
+                                     title=title).exists():
+                raise serializers.ValidationError(
+                    'You can leave only one review to each title')
+        return data
 
 
 class CommentSerializer(serializers.ModelSerializer):
