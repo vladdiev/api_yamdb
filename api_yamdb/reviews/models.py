@@ -128,6 +128,7 @@ class Title(models.Model):
     year = models.PositiveSmallIntegerField(
         verbose_name='Year',
         validators=[validator_pub_year],
+        db_index=True,
         null=True,
     )
     description = models.TextField(

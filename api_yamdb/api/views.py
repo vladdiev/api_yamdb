@@ -9,7 +9,6 @@ from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
-
 from reviews.models import Category, Comment, Genre, Review, Title, User
 from .filters import TitleFilter
 from .mixins import CreateListDestroyViewSet
@@ -49,29 +48,16 @@ class UserViewSet(viewsets.ModelViewSet):
 
 @api_view(['POST'])
 def signup_new_user(request):
-    username = request.data.get('username')
-    if not User.objects.filter(username=username).exists():
-        serializer = AuthSignUpSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        if serializer.validated_data['username'] != 'me':
-            serializer.save()
-            send_confirmation_code_to_email(username)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(
-            'Username указан неверно!', status=status.HTTP_400_BAD_REQUEST
-        )
-    user = get_object_or_404(User, username=username)
-    serializer = AuthSignUpSerializer(
-        user, data=request.data, partial=True
-    )
+    serializer = AuthSignUpSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    if serializer.validated_data['email'] == user.email:
-        serializer.save()
+    email = serializer.data['email']
+    username = serializer.data['username']
+    if username != 'me':
+        user, _ = User.objects.get_or_create(username=username, email=email)
         send_confirmation_code_to_email(username)
         return Response(serializer.data, status=status.HTTP_200_OK)
     return Response(
-        'Почта указана неверно!', status=status.HTTP_400_BAD_REQUEST
-    )
+        'Username is incorrect!', status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
@@ -84,14 +70,14 @@ def get_token(request):
         user = User.objects.get(username=username)
     except ObjectDoesNotExist:
         return Response(
-            'Пользователь не найден', status=status.HTTP_404_NOT_FOUND
+            'User is not found', status=status.HTTP_404_NOT_FOUND
         )
     if user.confirmation_code == confirmation_code:
         refresh = RefreshToken.for_user(user)
         token_data = {'token': str(refresh.access_token)}
         return Response(token_data, status=status.HTTP_200_OK)
     return Response(
-        'Код подтверждения неверный', status=status.HTTP_400_BAD_REQUEST
+        'Confirmation code is incorrect', status=status.HTTP_400_BAD_REQUEST
     )
 
 
@@ -157,4 +143,4 @@ class CommentViewSet(viewsets.ModelViewSet):
         title = get_object_or_404(Title, id=title_id)
         review_id = self.kwargs.get('review_id')
         review = get_object_or_404(Review, id=review_id, title=title)
-        return Comment.objects.filter(review=review)
+        return review.comments.all()

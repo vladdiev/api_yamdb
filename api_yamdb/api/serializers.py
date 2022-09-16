@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
-
 from reviews.models import Category, Comment, Genre, Review, Title, User
 from .utils import CurrentTitleDefault
 
@@ -53,9 +52,14 @@ class UserSerializer(serializers.ModelSerializer):
         )
 
     def validate(self, data):
-        if data.get('username') == 'me':
+        username = data.get('username')
+        if username == 'me':
             raise serializers.ValidationError(
-                'Username is incorrect')
+                f'You cannot use "{username}" as username.'
+            )
+        elif User.objects.filter(username=username).exists():
+            raise serializers.ValidationError(
+                f'User with username: "{username}" already exists.')
         return data
 
 
