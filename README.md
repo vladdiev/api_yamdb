@@ -146,3 +146,8 @@ python3 manage.py runserver
   }
 ]
 ```
+# Авторы
+
+* [Vladimir Ananin](https://github.com/vladdiev) 
+* [Chernykh Maria](https://github.com/chernyh-mv)
+* [Shandalii Dmitrii](https://github.com/FinkTim)
